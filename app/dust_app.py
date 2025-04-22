@@ -18,15 +18,16 @@ with open(dust_path, 'r', encoding='utf-8') as f:
 with open(station_path, encoding="utf-8") as f:
     station_data = json.load(f)
 
-# timestamp 처리
-timestamp_str = dust_data[0].get("dataTime", "알 수 없음")
+valid_data = next((d for d in dust_data if d and d.get("dataTime")), None)
+timestamp_str = valid_data.get("dataTime", "알 수 없음") if valid_data else "알 수 없음"
+
 try:
     timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M")
     timestamp_str_fmt = timestamp.strftime("%Y년 %m월 %d일 %H시 %M분 기준")
     now = datetime.now()
     delta = now - timestamp
-except:
-    timestamp_str_fmt = f"업데이트 시간: {timestamp_str}"
+except Exception as e:
+    timestamp_str_fmt = f"업데이트 시간: {timestamp_str} (오류: {e})"
      
 
 # 색상 기준
