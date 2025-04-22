@@ -79,7 +79,14 @@ def make_map(pollutant="pm10"):
     for item in dust_data:
         name = item["stationName"]
         flag = item[f"{pollutant}Flag"]
-        value = item[f"{pollutant}Value"] if flag not in BAD_VALUES else "N/A"
+        if flag in BAD_VALUES:
+            value = "점검 중"
+            emoji = "정보 없음 ❓"
+        else:
+            value = item[f"{pollutant}Value"]
+            emoji = get_level_emoji(value, pollutant)
+
+        # value = item[f"{pollutant}Value"] if flag not in BAD_VALUES else "N/A"
         coord = station_coords.get(name)
 
         if coord and str(value).isdigit():
@@ -123,10 +130,10 @@ st.markdown(f"**업데이트 시간:** {timestamp_str_fmt}")
 tab1, tab2 = st.tabs(["PM10 (미세먼지)", "PM2.5 (초미세먼지)"])
 
 with tab1:
-    st_folium(make_map("pm10"), width=725)
+    st_folium(make_map("pm10"), width=None, height=500)
 
 with tab2:
-    st_folium(make_map("pm25"), width=725)
+    st_folium(make_map("pm25"), width=None, height=500)
 
 # 📊 표 정보
 marker_info_list = []
