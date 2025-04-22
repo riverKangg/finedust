@@ -12,8 +12,8 @@ def update_national_dust():
     print("🌫️ 전국 미세먼지 정보 불러오는 중...")
     try:
         data = fetch_realtime_dust("전국")
-        Path("db").mkdir(exist_ok=True)
-        with open("db/realtime_dust.json", "w", encoding="utf-8") as f:
+        Path("app/db").mkdir(exist_ok=True)
+        with open("app/db/realtime_dust.json", "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         print("✅ 전국 미세먼지 정보 저장 완료!")
     except Exception as e:
