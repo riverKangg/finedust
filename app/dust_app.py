@@ -27,6 +27,7 @@ try:
     delta = now - timestamp
 except:
     timestamp_str_fmt = f"업데이트 시간: {timestamp_str}"
+     
 
 # 색상 기준
 BAD_VALUES = ["점검및교정", "장비점검", "자료이상", "통신장애"]
@@ -117,7 +118,7 @@ def make_map(pollutant="pm10"):
 # 📍 Streamlit 화면
 st.title("🌫️ 실시간 미세먼지 지도")
 st.markdown("**서울 및 주요 지역의 대기질 정보 (PM10 & PM2.5)**")
-
+st.markdown(f"**업데이트 시간:** {timestamp_str_fmt}") 
 tab1, tab2 = st.tabs(["PM10 (미세먼지)", "PM2.5 (초미세먼지)"])
 
 with tab1:
@@ -129,12 +130,14 @@ with tab2:
 # 📊 표 정보
 marker_info_list = []
 for item in dust_data:
+    sido = item["sidoName"]
     name = item["stationName"]
     pm10 = item["pm10Value"]
     pm25 = item["pm25Value"]
     coord = station_coords.get(name)
     if coord:
         marker_info_list.append({
+            "시도": sido,
             "측정소": name,
             "PM10": f"{pm10} ({get_level_emoji(pm10, 'pm10')})",
             "PM2.5": f"{pm25} ({get_level_emoji(pm25, 'pm25')})",
@@ -143,6 +146,7 @@ for item in dust_data:
         })
 
 df = pd.DataFrame(marker_info_list)
+df = df.drop(columns=["위도", "경도"])
 
 # 상위 고정 측정소 설정
 fixed_stations = ["서초구", "대왕판교로(백현동)", "백령도"]
@@ -151,6 +155,8 @@ others_df = df[~df["측정소"].isin(fixed_stations)]
 
 # 정렬 후 결합
 sorted_df = pd.concat([fixed_df, others_df])
+sorted_df = sorted_df.sort_values(by="시도")
+sorted_df = sorted_df.reset_index(drop=True)
 
 # 필터링 기능 추가
 with st.expander("🔍 측정소 필터링"):
