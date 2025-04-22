@@ -1,0 +1,35 @@
+name: Update Fine Dust Data Every Hour
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # 매 정각 실행 (UTC 기준)
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run update script
+        run: |
+          python app/scheduler/update_dust_hourly.py
+
+      - name: Commit & Push
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@users.noreply.github.com'
+          git add app/db/realtime_dust.json
+          git commit -m "Update dust data [auto]" || echo "No changes"
+          git push
+
