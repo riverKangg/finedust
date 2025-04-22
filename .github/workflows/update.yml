@@ -29,10 +29,10 @@ jobs:
 
       - name: Run update script
         env:
-            FINE_DUST_API_KEY: ${{ secrets.FINE_DUST_API_KEY }}
-          run: |
-            echo "FINE_DUST_API_KEY=${FINE_DUST_API_KEY}" > .env
-            python app/scheduler/update_dust_hourly.py
+          FINE_DUST_API_KEY: ${{ secrets.FINE_DUST_API_KEY }}
+        run: |
+         echo "FINE_DUST_API_KEY=${FINE_DUST_API_KEY}" > .env
+         python app/scheduler/update_dust_hourly.py
 
       - name: Commit & Push
         run: |
