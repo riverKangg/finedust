@@ -2,7 +2,7 @@ name: Update Fine Dust Data Every Hour
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '5 * * * *'
   workflow_dispatch:
 
 permissions:
