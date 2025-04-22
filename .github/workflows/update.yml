@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write 
+  contents: write
 
 jobs:
   update:
@@ -26,6 +26,14 @@ jobs:
       - name: Set PYTHONPATH
         run: echo "PYTHONPATH=$PWD" >> $GITHUB_ENV
 
+      - name: Configure Git user
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@users.noreply.github.com'
+
+      - name: Pull latest main
+        run: git pull --rebase origin main
+
       - name: Run update script
         env:
           DUST_API_KEY: ${{ secrets.DUST_API_KEY }}
@@ -35,10 +43,6 @@ jobs:
 
       - name: Commit & Push
         run: |
-          git config --global user.name 'github-actions'
-          git config --global user.email 'github-actions@users.noreply.github.com'
-          git pull --rebase origin main
           git add app/db/realtime_dust.json
-          git commit -m "Update dust data [auto]" || echo "No changes"
+          git diff --cached --quiet || git commit -m "Update dust data [auto]"
           git push
-
