@@ -25,10 +25,8 @@ try:
     timestamp_str_fmt = timestamp.strftime("%Y년 %m월 %d일 %H시 %M분 기준")
     now = datetime.now()
     delta = now - timestamp
-    freshness_note = f"⏱️ 업데이트된 지 {int(delta.total_seconds()//60)}분 경과"
 except:
     timestamp_str_fmt = f"업데이트 시간: {timestamp_str}"
-    freshness_note = "⚠️ 시간 정보 파싱 실패"
 
 # 색상 기준
 BAD_VALUES = ["점검및교정", "장비점검", "자료이상", "통신장애"]
@@ -72,22 +70,12 @@ station_coords = {
     if s["dmX"] and s["dmY"]
 }
 
-# 지역 정보 사전
-station_region = {
-    s["stationName"]: s.get("addr", "").split()[0]
-    for s in station_data
-}
-
 # 지도 만들기
-def make_map(pollutant="pm10", region_filter=None):
+def make_map(pollutant="pm10"):
     m = folium.Map(location=[37.49, 127.026], zoom_start=11, tiles="CartoDB positron")
 
     for item in dust_data:
         name = item["stationName"]
-        region = station_region.get(name, "")
-        if region_filter and region != region_filter:
-            continue
-
         flag = item[f"{pollutant}Flag"]
         value = item[f"{pollutant}Value"] if flag not in BAD_VALUES else "N/A"
         coord = station_coords.get(name)
@@ -104,6 +92,11 @@ def make_map(pollutant="pm10", region_filter=None):
                 fill_opacity=0.8,
                 popup=popup
             ).add_to(m)
+
+            # folium.Marker(
+            #     location=coord,
+            #     icon=folium.DivIcon(html=f"""<div style="font-size:10px;color:{color};">{name}</div>""")
+            # ).add_to(m)
 
     # 컬러 범례
     legend_html = '''
@@ -123,20 +116,25 @@ def make_map(pollutant="pm10", region_filter=None):
 
 # 📍 Streamlit 화면
 st.title("🌫️ 실시간 미세먼지 지도")
-st.markdown(f"**업데이트 시간:** {timestamp_str_fmt}  \n{freshness_note}")
-st.markdown("**서울 및 수도권 지역의 대기질 정보 (PM10 & PM2.5)**")
+st.markdown("**서울 및 주요 지역의 대기질 정보 (PM10 & PM2.5)**")
 
-# 📊 표 정보 생성
+tab1, tab2 = st.tabs(["PM10 (미세먼지)", "PM2.5 (초미세먼지)"])
+
+with tab1:
+    st_folium(make_map("pm10"), width=725)
+
+with tab2:
+    st_folium(make_map("pm25"), width=725)
+
+# 📊 표 정보
 marker_info_list = []
 for item in dust_data:
     name = item["stationName"]
     pm10 = item["pm10Value"]
     pm25 = item["pm25Value"]
     coord = station_coords.get(name)
-    region = station_region.get(name, "")
     if coord:
         marker_info_list.append({
-            "지역": region,
             "측정소": name,
             "PM10": f"{pm10} ({get_level_emoji(pm10, 'pm10')})",
             "PM2.5": f"{pm25} ({get_level_emoji(pm25, 'pm25')})",
@@ -146,29 +144,19 @@ for item in dust_data:
 
 df = pd.DataFrame(marker_info_list)
 
-# 고정 측정소 + 지역별 분류
+# 상위 고정 측정소 설정
 fixed_stations = ["서초구", "대왕판교로(백현동)", "백령도"]
 fixed_df = df[df["측정소"].isin(fixed_stations)]
-regions = sorted(df["지역"].dropna().unique())
+others_df = df[~df["측정소"].isin(fixed_stations)]
 
-region_tabs = st.tabs(["전체"] + regions)
+# 정렬 후 결합
+sorted_df = pd.concat([fixed_df, others_df])
 
-for i, tab in enumerate(region_tabs):
-    with tab:
-        if i == 0:
-            region_df = df
-            st.markdown("### 🗺️ 전체 지역 지도")
-            st_folium(make_map("pm10"), width=725)
-        else:
-            region = regions[i - 1]
-            region_df = df[df["지역"] == region]
-            st.markdown(f"### 🗺️ {region} 지역 지도")
-            st_folium(make_map("pm10", region_filter=region), width=725)
+# 필터링 기능 추가
+with st.expander("🔍 측정소 필터링"):
+    query = st.text_input("측정소 이름으로 검색")
+    if query:
+        sorted_df = sorted_df[sorted_df["측정소"].str.contains(query)]
 
-        # 상단 고정 후 정렬
-        df_display = pd.concat([
-            fixed_df[fixed_df["지역"] == region] if i > 0 else fixed_df,
-            region_df[~region_df["측정소"].isin(fixed_stations)]
-        ])
-        st.markdown("### 📊 측정소별 데이터")
-        st.dataframe(df_display.reset_index(drop=True), use_container_width=True)
+st.markdown("### 📊 측정소별 데이터")
+st.dataframe(sorted_df, use_container_width=True)
