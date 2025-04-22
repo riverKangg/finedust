@@ -25,14 +25,14 @@ with open("db/stations.json", encoding="utf-8") as f:
 
 # station_name → (lat, lng) dict 만들기
 station_coords = {
-    s["stationName"]: (float(s["dmY"]), float(s["dmX"]))
+    s["stationName"]: (float(s["dmX"]), float(s["dmY"]))
     for s in station_data
     if s["dmX"] and s["dmY"]
 }
 
-# 3. 지도 초기화 (중심: 서울)
-m = folium.Map(location=[37.5665, 126.9780], 
-               zoom_start=7,
+# 3. 지도 초기화 (중심: 강남)
+m = folium.Map(location=[37.49, 127.026], 
+               zoom_start=13,
                tiles="CartoDB positron"
                )
 
@@ -57,6 +57,7 @@ for item in dust_data:
             fill_opacity=0.8,
             popup=popup
         ).add_to(m)
+print("총 마커 수:", len(m._children))
 
 
 # 5. 저장
