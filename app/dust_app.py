@@ -3,85 +3,112 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 import json
+from datetime import datetime
 
-# 측정소와 미세먼지 정보가 담긴 JSON 파일 로드
-file_path = os.path.join(os.path.dirname(__file__), 'db', 'realtime_dust.json')
-with open(file_path, 'r', encoding='utf-8') as f:
+# 파일 경로
+BASE_DIR = os.path.dirname(__file__)
+dust_path = os.path.join(BASE_DIR, 'db', 'realtime_dust.json')
+station_path = os.path.join(BASE_DIR, 'db', 'stations.json')
+
+# JSON 로드
+with open(dust_path, 'r', encoding='utf-8') as f:
     dust_data = json.load(f)
 
-# 측정소 좌표 정보 로드
-station_path = os.path.join(os.path.dirname(__file__), 'db', 'stations.json')
 with open(station_path, encoding="utf-8") as f:
     station_data = json.load(f)
 
-# 지도 초기화 (중심: 강남)
-m = folium.Map(location=[37.49, 127.026], zoom_start=13, tiles="CartoDB positron")
+# timestamp 처리
+timestamp_str = dust_data[0].get("dataTime", "알 수 없음")
+try:
+    timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M")
+    timestamp = timestamp.strftime("%Y년 %m월 %d일 %H시 %M분 기준")
+except:
+    timestamp = f"업데이트 시간: {timestamp_str}"
 
+# 색상 기준
 BAD_VALUES = ["점검및교정", "장비점검", "자료이상", "통신장애"]
 
-def get_color(pm10_value):
-    value = int(pm10_value)
-    if value <= 30:
-        return "blue"
-    elif value <= 50:
-        return "green"
-    elif value <= 100:
-        return "yellow"
-    else:
-        return "red"
+def get_color(value, pollutant):
+    try:
+        value = int(value)
+        if pollutant == "pm10":
+            if value <= 30:
+                return "blue"
+            elif value <= 50:
+                return "green"
+            elif value <= 100:
+                return "orange"
+            else:
+                return "red"
+        elif pollutant == "pm25":
+            if value <= 15:
+                return "blue"
+            elif value <= 25:
+                return "green"
+            elif value <= 50:
+                return "orange"
+            else:
+                return "red"
+    except:
+        return "gray"
 
-# station_name → (lat, lng) dict 만들기
+# 좌표 사전
 station_coords = {
     s["stationName"]: (float(s["dmX"]), float(s["dmY"]))
     for s in station_data
     if s["dmX"] and s["dmY"]
 }
 
-# 마커 정보를 리스트로 저장
-marker_info_list = []
+# 지도 만들기
+def make_map(pollutant="pm10"):
+    m = folium.Map(location=[37.49, 127.026], zoom_start=11, tiles="CartoDB positron")
+    for item in dust_data:
+        name = item["stationName"]
+        flag = item[f"{pollutant}Flag"]
+        value = item[f"{pollutant}Value"] if flag not in BAD_VALUES else "N/A"
+        coord = station_coords.get(name)
 
-# 마커 추가
+        if coord and str(value).isdigit():
+            color = get_color(value, pollutant)
+            popup = f"{name}<br>{pollutant.upper()}: {value}"
+            folium.CircleMarker(
+                location=coord,
+                radius=7,
+                color=color,
+                fill=True,
+                fill_opacity=0.8,
+                popup=popup
+            ).add_to(m)
+    return m
+
+# 📍 Streamlit 화면
+st.title("🌫️ 실시간 미세먼지 지도")
+st.markdown(f"**업데이트 시간:** {timestamp}")
+st.markdown("**서울 및 주요 지역의 대기질 정보 (PM10 & PM2.5)**")
+
+tab1, tab2 = st.tabs(["PM10 (미세먼지)", "PM2.5 (초미세먼지)"])
+
+with tab1:
+    st_folium(make_map("pm10"), width=725)
+
+with tab2:
+    st_folium(make_map("pm25"), width=725)
+
+# 표 정보
+marker_info_list = []
 for item in dust_data:
     name = item["stationName"]
-    pm10_flag = item["pm10Flag"]
-    pm10 = item["pm10Value"] if pm10_flag not in BAD_VALUES else "ERROR"
+    pm10 = item["pm10Value"]
     pm25 = item["pm25Value"]
     coord = station_coords.get(name)
-
-    if coord and str(pm10).isdigit():
-        color = get_color(pm10)
-        popup = f"{name}<br>PM10: {pm10}<br>PM2.5: {pm25}"
-        folium.CircleMarker(
-            location=coord,
-            radius=7,
-            color=color,
-            fill=True,
-            fill_opacity=0.8,
-            popup=popup
-        ).add_to(m)
-        # 리스트에 정보 저장
+    if coord:
         marker_info_list.append({
             "측정소": name,
             "PM10": pm10,
             "PM2.5": pm25,
             "위도": coord[1],
-            "경도": coord[0],
-            "상태": pm10_flag
+            "경도": coord[0]
         })
 
-# Streamlit UI
-st.title("실시간 미세먼지 지도")
-st.subheader("서울 및 주요 지역의 PM10/PM2.5 상황")
-
-# 지도 표시
-st_data = st_folium(m, width=725)
-
-st.write("총 측정소 좌표 수:", len(station_coords))
-
-# 마커 정보 출력
-st.markdown("### 측정소별 미세먼지 정보")
-for info in marker_info_list:
-    st.markdown(f"**{info['측정소']}** - PM10: {info['PM10']} / PM2.5: {info['PM2.5']}")
-
-# 또는 표로 한 번에 출력하고 싶다면 아래 코드 사용:
+st.markdown("### 📊 측정소별 데이터")
 st.dataframe(marker_info_list)
