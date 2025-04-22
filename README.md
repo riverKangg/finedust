@@ -27,7 +27,7 @@
   │   ├── stations.json          # 측정소 정보 저장
   │   └── realtime_dust.json     # 실시간 미세먼지 정보 저장
   ├── /static
-  │   └── (여기에는 이미지나 CSS 등 정적 파일들) 
+  │   └──  
   ├── /scheduler
   │   └── update_dust_hourly.py  # 미세먼지 데이터 자동 업데이트 스크립트
   └── dust_app.py                # Streamlit 앱 (웹 앱 파일)
@@ -53,7 +53,7 @@ pip install -r requirements.txt
 streamlit run app/dust_app.py
 ```
 
-브라우저에서 자동으로 **http://localhost:8501**에서 앱을 확인할 수 있습니다.
+브라우저에서 자동으로 **http://localhost:8501** 에서 앱을 확인할 수 있습니다.
 
 ### 3. **실시간 미세먼지 데이터 업데이트**
 
