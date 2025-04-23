@@ -127,13 +127,53 @@ def make_map(pollutant="pm10"):
 st.title("🌫️ 실시간 미세먼지 지도")
 st.markdown("**서울 및 주요 지역의 대기질 정보 (PM10 & PM2.5)**")
 st.markdown(f"**업데이트 시간:** {timestamp_str_fmt}") 
+
+# 주요 관측소 결과
+st.markdown("### 🧭 주요 측정소 요약")
+
+fixed_stations = ["서초구", "대왕판교로(백현동)", "백령도"]
+cols = st.columns(len(fixed_stations))
+
+for i, name in enumerate(fixed_stations):
+    item = next((d for d in dust_data if d["stationName"] == name), None)
+    if not item:
+        cols[i].error(f"{name} 데이터 없음")
+        continue
+
+    pm10 = item["pm10Value"]
+    pm25 = item["pm25Value"]
+    flag10 = item["pm10Flag"]
+    flag25 = item["pm25Flag"]
+
+    if flag10 in BAD_VALUES:
+        pm10 = "점검 중"
+        emoji10 = "❓"
+    else:
+        emoji10 = get_level_emoji(pm10, "pm10")
+
+    if flag25 in BAD_VALUES:
+        pm25 = "점검 중"
+        emoji25 = "❓"
+    else:
+        emoji25 = get_level_emoji(pm25, "pm25")
+
+    cols[i].markdown(f"""
+    <div style="border:2px solid #ccc; border-radius:10px; padding:10px; text-align:center; background-color:#f9f9f9;">
+        <b>{name}</b><br>
+        🌫️ PM10: <b>{pm10}</b> {emoji10}<br>
+        🌁 PM2.5: <b>{pm25}</b> {emoji25}
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# 지도 표시
 tab1, tab2 = st.tabs(["PM10 (미세먼지)", "PM2.5 (초미세먼지)"])
 
 with tab1:
-    st_folium(make_map("pm10"), width=None, height=500)
+    st_folium(make_map("pm10"), width=None, height=200)
 
 with tab2:
-    st_folium(make_map("pm25"), width=None, height=500)
+    st_folium(make_map("pm25"), width=None, height=200)
 
 # 📊 표 정보
 marker_info_list = []
